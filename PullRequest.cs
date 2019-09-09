@@ -31,6 +31,12 @@ namespace ProjectFunctions
                 RequestID = data["resource"]["pullRequestId"];
                 string RowKey = data.resourceContainers.project.id;
                 string PartitionKey = data.resourceContainers.project.baseUrl;
+                string source = data.resource.sourceRefName;
+                string target = data.resource.targetRefName;
+                string repoID = data.resource.repository.id;
+                string PRID = data.resource.pullRequestId;
+                source = source.Replace("refs/heads/", "");
+                target = target.Replace("refs/heads/", "");
                 if (string.IsNullOrEmpty(RequestID))
                 {
                     return new NotFoundResult();
@@ -47,8 +53,7 @@ namespace ProjectFunctions
                 {
                     await PullRequestDetail.AddAsync(new PRDetail { PartitionKey = prefix.Prefix, RowKey = RequestID, HashedAccessToken = GetToken(64), JiraReleasedId = "" });
                 }
-                await topic.AddAsync(new PRInfo() { Prefix = prefix.Prefix, PRId = RequestID });
-
+                await topic.AddAsync(new PRInfo() { Prefix = prefix.Prefix, PRId = RequestID, Source = source, Target = target, BaseURL = PartitionKey, RepoID = repoID, PullRequestID = PRID });
             }
             catch
             {

@@ -14,5 +14,10 @@ namespace ProjectFunctions.Models
         }
         public string Prefix { get; set; }
         public string PRId { get; set; }
+        public string Source { get; set; }
+        public string Target { get; set; }
+        public string BaseURL { get; set; }
+        public string RepoID { get; set; }
+        public string PullRequestID { get; set; }
     }
 }
