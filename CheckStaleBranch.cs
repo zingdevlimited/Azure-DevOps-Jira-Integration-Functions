@@ -29,17 +29,25 @@ namespace ProjectFunctions
             HttpResponseMessage response = await client.SendAsync(req);
             if (response.IsSuccessStatusCode)
             {
-                dynamic data = JsonConvert.SerializeObject((response.Content).ReadAsStringAsync());
-                if(data.behindCount > 0)
+                JObject data = JObject.Parse(await response.Content.ReadAsStringAsync());
+                string statusURL = $"{info.BaseURL}/_apis/git/repositories/{info.RepoID}/pullRequests/{info.PullRequestID}/statuses/statuses?api-version=5.1-preview.1";
+                HttpRequestMessage statusChange = new HttpRequestMessage(HttpMethod.Post, statusURL);
+                statusChange.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+                string json;
+                if (Int32.Parse(data["behindCount"].ToString()) > 0)
                 {
-                    string statusURL = $"{info.BaseURL}_apis/git/repositories/{info.RepoID}/pullRequests/{info.PullRequestID}/statuses?api-version=5.1-preview.1";
-                    HttpRequestMessage statusChange = new HttpRequestMessage(HttpMethod.Patch, statusURL);
-                    statusChange.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
-                    //statusChange.Content = new StringContent(status, Encoding.UTF8, "application/json");
+                    json = @"{ ""state"": ""failed"", ""description"": ""Stale Branch"", ""context"": { ""name"": ""staleBranch"" }}";
                 }
                 else
                 {
-
+                    json = @"{ ""state"": ""succeeded"", ""description"": ""Stale Branch"", ""context"": { ""name"": ""staleBranch"" }}";
+                }
+                var content = new StringContent(json.ToString(), Encoding.UTF8, "application/json");
+                statusChange.Content = content;
+                HttpResponseMessage statusResponse = await client.SendAsync(statusChange);
+                if (!statusResponse.IsSuccessStatusCode)
+                {
+                    log.LogError("Error!");
                 }
             }
             else
