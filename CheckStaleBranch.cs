@@ -36,11 +36,11 @@ namespace ProjectFunctions
                 string json;
                 if (Int32.Parse(data["behindCount"].ToString()) > 0)
                 {
-                    json = @"{ ""state"": ""failed"", ""description"": ""Stale Branch"", ""context"": { ""name"": ""staleBranch"" }}";
+                    json = @"{ ""state"": ""failed"", ""description"": ""Up to date"", ""context"": { ""name"": ""staleBranch"" }}";
                 }
                 else
                 {
-                    json = @"{ ""state"": ""succeeded"", ""description"": ""Stale Branch"", ""context"": { ""name"": ""staleBranch"" }}";
+                    json = @"{ ""state"": ""succeeded"", ""description"": ""Up to date"", ""context"": { ""name"": ""staleBranch"" }}";
                 }
                 var content = new StringContent(json.ToString(), Encoding.UTF8, "application/json");
                 statusChange.Content = content;
