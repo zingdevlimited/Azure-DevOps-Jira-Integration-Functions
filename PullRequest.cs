@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using ProjectFunctions.Models;
 using JiraDevOpsIntegrationFunctions;
 using JiraDevOpsIntegrationFunctions.Models;
+using System.Text;
 
 namespace ProjectFunctions
 {
@@ -48,12 +49,13 @@ namespace ProjectFunctions
                 {
                     return new NotFoundResult();
                 }
-
+                string token = GetToken(64);
+                string hashedToken = GetHashedToken(token);
                 if (data.eventType == "git.pullrequest.created")
                 {
-                    await PullRequestDetail.AddAsync(new PRDetail { PartitionKey = prefix.Prefix, RowKey = RequestID, HashedAccessToken = GetToken(64), JiraReleasedId = "" });
+                    await PullRequestDetail.AddAsync(new PRDetail { PartitionKey = prefix.Prefix, RowKey = RequestID, JiraReleasedId = "", HashedAccessToken = hashedToken });
                 }
-                await topic.AddAsync(new PRInfo() { Prefix = prefix.Prefix, PRId = RequestID, Source = source, Target = target, BaseURL = PartitionKey, RepoID = repoID, PullRequestID = PRID });
+                await topic.AddAsync(new PRInfo() { Prefix = prefix.Prefix, PRId = RequestID, Source = source, Target = target, BaseURL = PartitionKey, RepoID = repoID, PullRequestID = PRID, Token = token });
             }
             catch
             {
@@ -61,7 +63,7 @@ namespace ProjectFunctions
             }
             return new OkResult();
         }
-
+        
         /// <summary>
         /// This method is used in Access Token generation
         /// </summary>
@@ -83,6 +85,13 @@ namespace ProjectFunctions
                 }
             }
             return Token;
+        }
+
+        public static string GetHashedToken(string token)
+        {
+            SHA256 sha256 = SHA256.Create();
+            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(token));
+            return BitConverter.ToString(hashedBytes).Replace("-", "").ToUpper();
         }
     }
 }

@@ -10,9 +10,9 @@ namespace JiraDevOpsIntegrationFunctions
     /// </summary>
     public class PRDetail : TableEntity
     {
-        public string HashedAccessToken { get; set; }
+        
         public string JiraReleasedId { get; set; }
-
+        public string HashedAccessToken { get; set; }
         public PRDetail()
         {
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using JiraDevOpsIntegrationFunctions.Models;
@@ -16,7 +17,6 @@ namespace JiraDevOpsIntegrationFunctions
         [FunctionName("CheckJiraIssues")]
         public async static Task Run([ServiceBusTrigger("prupdated", "CheckJiraIssues", Connection = "AzureWebJobsServiceBus")]PRInfo info, [Table("PRIssueMapping")] CloudTable table, ILogger log)
         {
-            //string PartitionKey = "Marion|ID";
             string PartitionKey = $"{info.Prefix}|{info.PullRequestID}";
             int records = 0;
             TableQuery<PRIssueMapping> rangeQuery = new TableQuery<PRIssueMapping>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, PartitionKey));
@@ -29,14 +29,32 @@ namespace JiraDevOpsIntegrationFunctions
             string statusURL = $"{info.BaseURL}/_apis/git/repositories/{info.RepoID}/pullRequests/{info.PullRequestID}/statuses/statuses?api-version=5.1-preview.1";
             HttpRequestMessage statusChange = new HttpRequestMessage(HttpMethod.Post, statusURL);
             statusChange.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
-            dynamic obj;
+            JiraIssueModel obj;
             if (records == 0)
             {
-                obj = new JiraIssueModel() { state = "pending", description = "Click here to select Issues", context = new Context() { name = "JiraIssues" }, targetUrl = "https://www.zing.dev" };
+                obj = new JiraIssueModel()
+                {
+                    state = "pending",
+                    description = "Click here to select Issues",
+                    context = new Context()
+                    {
+                        name = "JiraIssues"
+                    },
+                    targetUrl = $"{Environment.GetEnvironmentVariable("SPAUrl", EnvironmentVariableTarget.Process)}/{info.Prefix}/{info.PullRequestID}/{info.Token}"
+                };
             }
             else
             {
-                obj = new JiraIssueModel() { state = "succeeded", description = $"Linked to {records} issues" , context = new Context() { name= "JiraIssues"}, targetUrl = "https://www.zing.dev" };
+                obj = new JiraIssueModel()
+                {
+                    state = "succeeded",
+                    description = $"Linked to {records} issues" ,
+                    context = new Context()
+                    {
+                        name = "JiraIssues"
+                    },
+                    targetUrl = $"{Environment.GetEnvironmentVariable("SPAUrl", EnvironmentVariableTarget.Process)}/{info.Prefix}/{info.PullRequestID}/{info.Token}"
+                };
             }
             dynamic json = JsonConvert.SerializeObject(obj);
             statusChange.Content = new StringContent(json.ToString(), Encoding.UTF8, "application/json");

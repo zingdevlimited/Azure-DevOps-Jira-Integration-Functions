@@ -19,5 +19,6 @@ namespace ProjectFunctions.Models
         public string BaseURL { get; set; }
         public string RepoID { get; set; }
         public string PullRequestID { get; set; }
+        public string Token { get; set; }
     }
 }
