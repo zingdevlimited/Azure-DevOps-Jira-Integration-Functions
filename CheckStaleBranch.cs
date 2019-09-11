@@ -36,7 +36,7 @@ namespace ProjectFunctions
                 string json;
                 if (Int32.Parse(data["behindCount"].ToString()) > 0)
                 {
-                    json = @"{ ""state"": ""failed"", ""description"": ""Up to date"", ""context"": { ""name"": ""staleBranch"" }}";
+                    json = @"{ ""state"": ""failed"", ""description"": ""Behind branch"", ""context"": { ""name"": ""staleBranch"" }}";
                 }
                 else
                 {

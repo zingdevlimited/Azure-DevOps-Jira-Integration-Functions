@@ -8,6 +8,7 @@ namespace JiraDevOpsIntegrationFunctions.Models
     public class PRIssueMapping : TableEntity
     {
         public string PartitionKey { get; set; }
+        public string RowKey { get; set; }
         public PRIssueMapping()
         {
         }
