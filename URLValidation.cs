@@ -39,7 +39,7 @@ namespace JiraDevOpsIntegrationFunctions
                 );
             foreach (PRDetail item in await cloudTable.ExecuteQuerySegmentedAsync(rangeQuery, null))
             {
-                realHashToken = item.HashedAccessToken;
+                realHashToken = item.HashedToken;
             }
 
             if (realHashToken == hashToken)

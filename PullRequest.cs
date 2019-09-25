@@ -53,7 +53,7 @@ namespace ProjectFunctions
                 string hashedToken = GetHashedToken(token);
                 if (data.eventType == "git.pullrequest.created")
                 {
-                    await PullRequestDetail.AddAsync(new PRDetail { PartitionKey = prefix.Prefix, RowKey = RequestID, JiraReleasedId = "", HashedAccessToken = hashedToken });
+                    await PullRequestDetail.AddAsync(new PRDetail { PartitionKey = prefix.Prefix, RowKey = RequestID, JiraReleasedId = "", HashedToken = hashedToken });
                 }
                 await topic.AddAsync(new PRInfo() { Prefix = prefix.Prefix, PRId = RequestID, Source = source, Target = target, BaseURL = PartitionKey, RepoID = repoID, PullRequestID = PRID, Token = token });
             }
