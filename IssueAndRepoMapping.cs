@@ -27,9 +27,13 @@ namespace JiraDevOpsIntegrationFunctions
             dynamic data = JObject.Parse(await new StreamReader(request.Body).ReadToEndAsync());
             string prefix = data.Prefix;
             string requestID = data.RequestID;
-            string issueID = data.IssueID;
-            string repoID = data.RepoID;
+            string token = data.token;
+            string hashedToken = Utilities.HashValue(token);
+            string[] issueIDs = data.IssueID.ToObject<string[]>();
+            string[] repoIDs = data.RepoID.ToObject<string[]>();
             int records = 0;
+
+
 
             TableQuery<PRDetail> rangeQuery = new TableQuery<PRDetail>().Where(
                 TableQuery.CombineFilters(
@@ -40,7 +44,14 @@ namespace JiraDevOpsIntegrationFunctions
 
             foreach (PRDetail item in await detailTable.ExecuteQuerySegmentedAsync(rangeQuery, null))
             {
-                records++;
+                if(item.HashedToken == hashedToken)
+                {
+                    records++;
+                }
+                else
+                {
+                    return new NotFoundResult();
+                }
             }
 
             if(records != 1)
@@ -48,23 +59,31 @@ namespace JiraDevOpsIntegrationFunctions
                 return new NotFoundResult();
             }
 
-            PRIssueMapping issueMapping = new PRIssueMapping()
+            foreach (string issueID in issueIDs)
             {
-                PartitionKey = $"{prefix}|{requestID}",
-                RowKey = issueID
-            };
+                PRIssueMapping issueMapping = new PRIssueMapping()
+                {
+                    PartitionKey = $"{prefix}|{requestID}",
+                    RowKey = issueID
+                };
+                TableOperation operation = TableOperation.InsertOrReplace(issueMapping);
+                await issueTable.ExecuteAsync(operation);
+            }
 
-            PRRepoMapping repoMapping = new PRRepoMapping()
+            foreach (string issueID in issueIDs)
             {
-                PartitionKey = $"{prefix}|{issueID}",
-                RowKey = repoID, MergeStatus = "TODO"
-            };
-
-            TableOperation operation = TableOperation.InsertOrReplace(issueMapping);
-            TableOperation operation2 = TableOperation.InsertOrReplace(repoMapping);
-
-            await issueTable.ExecuteAsync(operation);
-            await repoTable.ExecuteAsync(operation2);
+                foreach (string repoID in repoIDs)
+                {
+                    PRRepoMapping repoMapping = new PRRepoMapping()
+                    {
+                        PartitionKey = $"{prefix}|{issueID}",
+                        RowKey = repoID,
+                        MergeStatus = "TODO"
+                    };
+                    TableOperation operation2 = TableOperation.InsertOrReplace(repoMapping);
+                    await repoTable.ExecuteAsync(operation2);
+                }
+            }
             return new OkResult();
         }
     }
