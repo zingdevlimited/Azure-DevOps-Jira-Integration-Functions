@@ -5,8 +5,8 @@ using System.Text;
 
 namespace JiraDevOpsIntegrationFunctions.Models
 {
-    public class PRIssueMapping : TableEntity
+    class PRRepoMapping : TableEntity
     {
-        public PRIssueMapping() { }
+        public string MergeStatus { get; set; }
     }
 }
