@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using JiraDevOpsIntegrationFunctions.Models;
+using ProjectFunctions.Models;
 
 namespace JiraDevOpsIntegrationFunctions
 {
@@ -34,11 +35,14 @@ namespace JiraDevOpsIntegrationFunctions
 
             if (string.IsNullOrWhiteSpace(req.token) || Utilities.HashValue(req.token) != match.HashedToken)
                 return new UnauthorizedResult();
-
+            log.LogWarning("Hello");
+            log.LogInformation(Environment.GetEnvironmentVariable("baseURL", EnvironmentVariableTarget.Process));
             var res = new ValidatePRInfoResponse
             {
                 clientId = clientId,
-                clientSecret = clientSecret
+                clientSecret = clientSecret,
+                url = Environment.GetEnvironmentVariable("baseURL", EnvironmentVariableTarget.Process)
+                
             };
             return new OkObjectResult(res);
         }

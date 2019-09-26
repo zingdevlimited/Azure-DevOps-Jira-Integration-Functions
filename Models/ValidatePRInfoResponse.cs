@@ -8,5 +8,6 @@ namespace JiraDevOpsIntegrationFunctions.Models
     {
         public string clientId { get; set; }
         public string clientSecret { get; set; }
+        public string url { get; set; }
     }
 }

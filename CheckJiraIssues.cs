@@ -27,6 +27,7 @@ namespace JiraDevOpsIntegrationFunctions
             HttpClient client = new HttpClient();
             var byteArray = Encoding.ASCII.GetBytes($":{Environment.GetEnvironmentVariable("AzureDevOps_Setting", EnvironmentVariableTarget.Process)}");
             string statusURL = $"{info.BaseURL}/_apis/git/repositories/{info.RepoID}/pullRequests/{info.PullRequestID}/statuses/statuses?api-version=5.1-preview.1";
+            Environment.SetEnvironmentVariable("baseURL", info.BaseURL);
             HttpRequestMessage statusChange = new HttpRequestMessage(HttpMethod.Post, statusURL);
             statusChange.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
             JiraIssueModel obj;
