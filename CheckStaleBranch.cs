@@ -1,16 +1,9 @@
 using System;
-using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using JiraDevOpsIntegrationFunctions.Models;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ProjectFunctions.Models;
 

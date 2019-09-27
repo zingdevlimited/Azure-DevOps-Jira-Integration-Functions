@@ -33,10 +33,9 @@ namespace JiraDevOpsIntegrationFunctions
             if (match == null)
                 return new NotFoundResult();
 
-            if (string.IsNullOrWhiteSpace(req.token) || Utilities.HashValue(req.token) != match.HashedToken)
+            if (string.IsNullOrWhiteSpace(req.token) || Utilities.GetHashedToken(req.token) != match.HashedToken)
                 return new UnauthorizedResult();
-            log.LogWarning("Hello");
-            log.LogInformation(Environment.GetEnvironmentVariable("baseURL", EnvironmentVariableTarget.Process));
+
             var res = new ValidatePRInfoResponse
             {
                 clientId = clientId,

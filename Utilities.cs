@@ -7,33 +7,34 @@ namespace JiraDevOpsIntegrationFunctions
 {
     public static class Utilities
     {
-        public static string GetRandomString(int length)
+        /// <summary>
+        /// This method is used in Access Token generation
+        /// </summary>
+        /// <param name="length">The length of the Token</param>
+        /// <returns>Access Token</returns>
+        public static string GetToken(int length)
         {
-            const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-            string s = "";
-            using (RNGCryptoServiceProvider provider = new RNGCryptoServiceProvider())
+            const string Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+            string Token = "";
+            RNGCryptoServiceProvider Provider = new RNGCryptoServiceProvider();
+            while (Token.Length != length)
             {
-                while (s.Length != length)
+                byte[] oneByte = new byte[1];
+                Provider.GetBytes(oneByte);
+                char character = (char)oneByte[0];
+                if (Chars.Contains(character))
                 {
-                    byte[] oneByte = new byte[1];
-                    provider.GetBytes(oneByte);
-                    char character = (char)oneByte[0];
-                    if (valid.Contains(character))
-                    {
-                        s += character;
-                    }
+                    Token += character;
                 }
             }
-            return s;
+            return Token;
         }
 
-        public static string HashValue(string value)
+        public static string GetHashedToken(string token)
         {
-            using (var sha256 = SHA256.Create())
-            {
-                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(value));
-                return BitConverter.ToString(hashedBytes).Replace("-", string.Empty).ToUpper();
-            }
+            SHA256 sha256 = SHA256.Create();
+            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(token));
+            return BitConverter.ToString(hashedBytes).Replace("-", "").ToUpper();
         }
     }
 }

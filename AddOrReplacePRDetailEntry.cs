@@ -24,12 +24,12 @@ namespace JiraDevOpsIntegrationFunctions
             if (req == null)
                 return new BadRequestResult();
 
-            var token = Utilities.GetRandomString(64);
+            var token = Utilities.GetToken(64);
             var op = TableOperation.InsertOrReplace(new PRDetail()
             {
                 PartitionKey = req.groupId,
                 RowKey = req.pullRequestId,
-                HashedToken = Utilities.HashValue(token)
+                HashedToken = Utilities.GetHashedToken(token)
             });
             await table.ExecuteAsync(op);
             return new OkObjectResult(new AddOrReplacePRDetailResponse() { token = token });

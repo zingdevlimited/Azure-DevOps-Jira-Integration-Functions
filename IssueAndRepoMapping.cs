@@ -28,7 +28,7 @@ namespace JiraDevOpsIntegrationFunctions
             string prefix = data.Prefix;
             string requestID = data.RequestID;
             string token = data.token;
-            string hashedToken = Utilities.HashValue(token);
+            string hashedToken = Utilities.GetHashedToken(token);
             string[] issueIDs = data.IssueID.ToObject<string[]>();
             string[] repoIDs = data.RepoID.ToObject<string[]>();
             int records = 0;
