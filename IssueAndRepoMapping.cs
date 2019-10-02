@@ -26,14 +26,13 @@ namespace JiraDevOpsIntegrationFunctions
 
             dynamic data = JObject.Parse(await new StreamReader(request.Body).ReadToEndAsync());
             string prefix = data.Prefix;
+            string[] issueIDs = data.IssueID.ToObject<string[]>();
             string requestID = data.RequestID;
             string token = data.token;
             string hashedToken = Utilities.GetHashedToken(token);
-            string[] issueIDs = data.IssueID.ToObject<string[]>();
-            string[] repoIDs = data.RepoID.ToObject<string[]>();
+            
+            RepoMapping[] repos = data.RepoMapping.ToObject<RepoMapping[]>();
             int records = 0;
-
-
 
             TableQuery<PRDetail> rangeQuery = new TableQuery<PRDetail>().Where(
                 TableQuery.CombineFilters(
@@ -70,13 +69,13 @@ namespace JiraDevOpsIntegrationFunctions
                 await issueTable.ExecuteAsync(operation);
             }
 
-            foreach (string issueID in issueIDs)
+            foreach(RepoMapping repo in repos)
             {
-                foreach (string repoID in repoIDs)
+                foreach(string repoID in repo.repos)
                 {
                     PRRepoMapping repoMapping = new PRRepoMapping()
                     {
-                        PartitionKey = $"{prefix}|{issueID}",
+                        PartitionKey = $"{prefix}|{repo.issue}",
                         RowKey = repoID,
                         MergeStatus = "TODO"
                     };
