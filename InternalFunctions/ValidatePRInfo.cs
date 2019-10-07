@@ -1,24 +1,20 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
+using JiraDevOpsIntegrationFunctions.Helpers;
+using JiraDevOpsIntegrationFunctions.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using JiraDevOpsIntegrationFunctions.Models;
-namespace JiraDevOpsIntegrationFunctions
+using System;
+namespace JiraDevOpsIntegrationFunctions.InternalFunctions
 {
     public static class ValidatePRInfo
     {
         [FunctionName(nameof(ValidatePRInfo))]
         public static IActionResult Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post")] ValidatePRInfoRequest req,
-            [Table("PRDetail", "{groupId}", "{pullRequestId}")] PRDetail match,
+            [Table(Constants.PullRequestTable, "{groupId}", "{pullRequestId}")] PRDetail match,
             ILogger log)
         {
-            log.LogInformation("ValidatePRInfo HTTP trigger function processed a request.");
-
             string clientId = Environment.GetEnvironmentVariable("JiraClientId", EnvironmentVariableTarget.Process);
             if (string.IsNullOrWhiteSpace(clientId))
                 throw new Exception("JiraClientId missing from configuration");
@@ -30,14 +26,14 @@ namespace JiraDevOpsIntegrationFunctions
             if (match == null)
                 return new NotFoundResult();
 
-            if (string.IsNullOrWhiteSpace(req.token) || Utilities.GetHashedToken(req.token) != match.HashedToken)
+            if (string.IsNullOrWhiteSpace(req.Token) || Utilities.GetHashedToken(req.Token) != match.HashedToken)
                 return new UnauthorizedResult();
 
             var res = new ValidatePRInfoResponse
             {
-                clientId = clientId,
-                clientSecret = clientSecret,
-                url = Environment.GetEnvironmentVariable("baseURL", EnvironmentVariableTarget.Process)
+                ClientId = clientId,
+                ClientSecret = clientSecret,
+                Url = Environment.GetEnvironmentVariable(Constants.BaseUrlConnectionName, EnvironmentVariableTarget.Process)
                 
             };
             return new OkObjectResult(res);

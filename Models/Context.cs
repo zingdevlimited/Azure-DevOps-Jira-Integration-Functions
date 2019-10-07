@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JiraDevOpsIntegrationFunctions.Models
+﻿namespace JiraDevOpsIntegrationFunctions.Models
 {
-    class Context
+    public class Context
     {
-        public Context()
-        {
-        }
-        public string name { get; set; }
+        public Context() { }
+        public string Name { get; set; }
     }
 }

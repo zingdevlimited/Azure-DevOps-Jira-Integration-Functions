@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JiraDevOpsIntegrationFunctions.Models
+﻿namespace JiraDevOpsIntegrationFunctions.Models
 {
     public class AddOrReplacePRDetailResponse
     {
-        public string token { get; set; }
+        public AddOrReplacePRDetailResponse() { }
+        public string Token { get; set; }
     }
 }

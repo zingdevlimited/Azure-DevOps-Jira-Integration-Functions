@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JiraDevOpsIntegrationFunctions.Models
+﻿namespace JiraDevOpsIntegrationFunctions.Models
 {
-    class RepoInfo
+    public class RepoInfo
     {
-        public string status { get; set; }
-        public string repoName { get; set; }
+        public RepoInfo() { }
+        public string Status { get; set; }
+        public string RepoName { get; set; }
     }
 }

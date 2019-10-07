@@ -1,13 +1,13 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
+using JiraDevOpsIntegrationFunctions.Helpers;
+using JiraDevOpsIntegrationFunctions.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
 using Microsoft.WindowsAzure.Storage.Table;
-using JiraDevOpsIntegrationFunctions.Models;
 using Newtonsoft.Json.Linq;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace JiraDevOpsIntegrationFunctions
 {
@@ -16,8 +16,9 @@ namespace JiraDevOpsIntegrationFunctions
         [FunctionName("IssueAndRepoMapping")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest request,
-            [Table("PRDetail")] CloudTable detailTable, [Table("PRIssueMapping")] CloudTable issueTable,
-            [Table("IssueRepoMapping")] CloudTable repoTable)
+            [Table(Constants.PullRequestTable)] CloudTable detailTable, 
+            [Table(Constants.IssueMappingTable)] CloudTable issueTable,
+            [Table(Constants.RepoMappingTable)] CloudTable repoTable)
         {            
             if (request == null)
             {
@@ -71,11 +72,11 @@ namespace JiraDevOpsIntegrationFunctions
 
             foreach(RepoMapping repo in repos)
             {
-                foreach(string repoID in repo.repos)
+                foreach(string repoID in repo.Repos)
                 {
                     PRRepoMapping repoMapping = new PRRepoMapping()
                     {
-                        PartitionKey = $"{prefix}|{repo.issue}",
+                        PartitionKey = $"{prefix}|{repo.Issue}",
                         RowKey = repoID,
                         MergeStatus = "TODO"
                     };

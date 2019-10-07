@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JiraDevOpsIntegrationFunctions.Models
+﻿namespace JiraDevOpsIntegrationFunctions.Models
 {
     public class ValidatePRInfoResponse
     {
-        public string clientId { get; set; }
-        public string clientSecret { get; set; }
-        public string url { get; set; }
+        public ValidatePRInfoResponse() { }
+        public string ClientId { get; set; }
+        public string ClientSecret { get; set; }
+        public string Url { get; set; }
     }
 }

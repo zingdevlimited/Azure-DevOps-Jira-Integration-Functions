@@ -1,7 +1,4 @@
 ﻿using Microsoft.WindowsAzure.Storage.Table;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace JiraDevOpsIntegrationFunctions.Models
 {
@@ -10,9 +7,7 @@ namespace JiraDevOpsIntegrationFunctions.Models
     /// </summary>
     public class GroupPrefix : TableEntity
     {
+        public GroupPrefix() { }
         public string Prefix { get; set; }
-        public GroupPrefix()
-        {
-        }
     }
 }

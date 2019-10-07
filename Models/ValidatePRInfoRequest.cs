@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JiraDevOpsIntegrationFunctions.Models
+﻿namespace JiraDevOpsIntegrationFunctions.Models
 {
     public class ValidatePRInfoRequest
     {
-        public string groupId { get; set; }
-        public string pullRequestId { get; set; }
-        public string token { get; set; }
+        public string GroupId { get; set; }
+        public string PullRequestId { get; set; }
+        public string Token { get; set; }
     }
 }

@@ -12,6 +12,7 @@ using JiraDevOpsIntegrationFunctions.Models;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
+using JiraDevOpsIntegrationFunctions.Helpers;
 
 namespace JiraDevOpsIntegrationFunctions
 {
@@ -20,9 +21,9 @@ namespace JiraDevOpsIntegrationFunctions
         [FunctionName("GetPRsAndRepos")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
-            [Table("PRIssueMapping")] CloudTable table,
-            [Table("IssueRepoMapping")] CloudTable table2,
-            [Table("GroupPrefix")] CloudTable table3,
+            [Table(Constants.IssueMappingTable)] CloudTable issueMappingTable,
+            [Table(Constants.RepoMappingTable)] CloudTable RepoMappingTable,
+            [Table(Constants.PrefixTable)] CloudTable GroupPrefixTable,
             ILogger log)
         {
             var PRs = new List<string>();
@@ -34,10 +35,10 @@ namespace JiraDevOpsIntegrationFunctions
             string urlName = "";
             HttpClient client = new HttpClient();
             string url = "";
-            var byteArray = Encoding.ASCII.GetBytes($":{Environment.GetEnvironmentVariable("AzureDevOps_Setting", EnvironmentVariableTarget.Process)}");
+            var byteArray = Encoding.ASCII.GetBytes($":{Environment.GetEnvironmentVariable(Constants.AzureDevOpsConnectionName, EnvironmentVariableTarget.Process)}");
 
             TableQuery<PRIssueMapping> rangeQuery = new TableQuery<PRIssueMapping>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, RowKey));
-            foreach (PRIssueMapping issue in await table.ExecuteQuerySegmentedAsync(rangeQuery, null))
+            foreach (PRIssueMapping issue in await issueMappingTable.ExecuteQuerySegmentedAsync(rangeQuery, null))
             {
                 string[] issueSplit = issue.PartitionKey.Split("|");
                 prefix = issueSplit[0];
@@ -46,7 +47,7 @@ namespace JiraDevOpsIntegrationFunctions
             string[] PRArray = PRs.ToArray();
 
             TableQuery<GroupPrefix> rangeQuery3 = new TableQuery<GroupPrefix>().Where(TableQuery.GenerateFilterCondition("Prefix", QueryComparisons.Equal, prefix));
-            foreach (GroupPrefix repo in await table3.ExecuteQuerySegmentedAsync(rangeQuery3, null))
+            foreach (GroupPrefix repo in await GroupPrefixTable.ExecuteQuerySegmentedAsync(rangeQuery3, null))
             {
                 string[] urlSplit = repo.PartitionKey.Split(" ");
                 urlName = urlSplit[1];
@@ -54,7 +55,7 @@ namespace JiraDevOpsIntegrationFunctions
 
             string PartitionKey = $"{prefix}|{RowKey}";
             TableQuery<PRRepoMapping> rangeQuery2 = new TableQuery<PRRepoMapping>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, PartitionKey));
-            foreach (PRRepoMapping repo in await table2.ExecuteQuerySegmentedAsync(rangeQuery2, null))
+            foreach (PRRepoMapping repo in await RepoMappingTable.ExecuteQuerySegmentedAsync(rangeQuery2, null))
             {
                 url = $"https://dev.azure.com/{urlName}/_apis/git/repositories/{repo.RowKey}?api-version=4.1";
                 HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -62,7 +63,7 @@ namespace JiraDevOpsIntegrationFunctions
                 HttpResponseMessage response = await client.SendAsync(request);
                 dynamic repoJSON = JObject.Parse(await response.Content.ReadAsStringAsync());
                 string name = repoJSON.name;
-                Repos.Add(new RepoInfo() {status = repo.MergeStatus, repoName = name});
+                Repos.Add(new RepoInfo() {Status = repo.MergeStatus, RepoName = name});
             }
             RepoInfo[] RepoArray = Repos.ToArray();
 
@@ -75,10 +76,10 @@ namespace JiraDevOpsIntegrationFunctions
                 HttpResponseMessage response = await client.SendAsync(request);
                 dynamic titleJSON = JObject.Parse(await response.Content.ReadAsStringAsync());
                 string title = titleJSON.repository.name;
-                PullInfo.Add(new PR() { ID = PR, name = urlName, repoTitle = title });
+                PullInfo.Add(new PR() { Id = PR, Name = urlName, RepoTitle = title });
             }
-            PR[] pullInfo = PullInfo.ToArray();          
-
+            PR[] pullInfo = PullInfo.ToArray();
+            
             return new OkObjectResult(new PRAndRepoResponse() { PullRequests = pullInfo, Repos = RepoArray });
         }
     }

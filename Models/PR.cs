@@ -1,14 +1,10 @@
-﻿using Microsoft.WindowsAzure.Storage.Table;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JiraDevOpsIntegrationFunctions.Models
+﻿namespace JiraDevOpsIntegrationFunctions.Models
 {
     public class PR
     {
-        public string ID { get; set; }
-        public string name { get; set; }
-        public string repoTitle { get; set; }
+        public PR() { }
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string RepoTitle { get; set; }
     }
 }
