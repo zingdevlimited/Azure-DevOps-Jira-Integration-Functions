@@ -1,6 +1,6 @@
 ﻿namespace JiraDevOpsIntegrationFunctions.Helpers
 {
-    public class Constants
+    public static class Constants
     {
         public const string ServiceBusConnectionName = "AzureWebJobsServiceBus";
         public const string StaleBranchTriggerName = "CheckStaleBranch";
@@ -13,7 +13,9 @@
         public const string ServiceBus = "prupdated";
         public const string PullRequestTable = "PRDetail";
         public const string IssueMappingTable = "PRIssueMapping";
+        public const string ReleaseTable = "ReleaseRepoMapping";
         public const string PrefixTable = "GroupPrefix";
         public const string RepoMappingTable = "IssueRepoMapping";
+        public const string JwtClientName = "JwtclientKey";
     }
 }

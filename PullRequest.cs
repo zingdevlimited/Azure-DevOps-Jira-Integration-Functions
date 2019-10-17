@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using ProjectFunctions.Models;
 using System.IO;
@@ -14,10 +13,10 @@ namespace ProjectFunctions
 {
     public static class PullRequest
     {
-        [FunctionName("PullRequest")]
+        [FunctionName(nameof(PullRequest))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
-            ILogger log, Binder binder, [Table(Constants.PullRequestTable)] IAsyncCollector<PRDetail> PullRequestDetail,
+            Binder binder, [Table(Constants.PullRequestTable)] IAsyncCollector<PRDetail> PullRequestDetail,
             [ServiceBus(Constants.ServiceBus, Connection = Constants.ServiceBusConnectionName)] IAsyncCollector<PRInfo> topic)
         {
             try
@@ -49,7 +48,7 @@ namespace ProjectFunctions
                 string hashedToken = Utilities.GetHashedToken(token);
                 if (Data.eventType == "git.pullrequest.created")
                 {
-                    await PullRequestDetail.AddAsync(new PRDetail { PartitionKey = prefix.Prefix, RowKey = RequestID, JiraReleasedId = "", HashedToken = hashedToken });
+                    await PullRequestDetail.AddAsync(new PRDetail { PartitionKey = prefix.Prefix, RowKey = RequestID, JiraReleasedId = "10", HashedToken = hashedToken });
                 }
                 await topic.AddAsync(new PRInfo() { Prefix = prefix.Prefix, PRId = RequestID, Source = Source, Target = Target, BaseURL = PartitionKey, RepoID = RepoId, PullRequestID = PrId, Token = token });
             }

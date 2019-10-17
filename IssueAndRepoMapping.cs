@@ -6,6 +6,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -13,77 +14,70 @@ namespace JiraDevOpsIntegrationFunctions
 {
     public static class IssueAndRepoMapping
     {
-        [FunctionName("IssueAndRepoMapping")]
+        [FunctionName(nameof(IssueAndRepoMapping))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest request,
-            [Table(Constants.PullRequestTable)] CloudTable detailTable, 
-            [Table(Constants.IssueMappingTable)] CloudTable issueTable,
-            [Table(Constants.RepoMappingTable)] CloudTable repoTable)
+            [Table(Constants.PullRequestTable)] CloudTable DetailTable, 
+            [Table(Constants.IssueMappingTable)] CloudTable IssueTable,
+            [Table(Constants.RepoMappingTable)] CloudTable RepoTable)
         {            
             if (request == null)
             {
                 return new BadRequestResult();
             }
 
-            dynamic data = JObject.Parse(await new StreamReader(request.Body).ReadToEndAsync());
-            string prefix = data.Prefix;
-            string[] issueIDs = data.IssueID.ToObject<string[]>();
-            string requestID = data.RequestID;
-            string token = data.token;
-            string hashedToken = Utilities.GetHashedToken(token);
-            
-            RepoMapping[] repos = data.RepoMapping.ToObject<RepoMapping[]>();
-            int records = 0;
-
-            TableQuery<PRDetail> rangeQuery = new TableQuery<PRDetail>().Where(
-                TableQuery.CombineFilters(
-                    TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, prefix),
-                TableOperators.And,
-                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, requestID))
-                );
-
-            foreach (PRDetail item in await detailTable.ExecuteQuerySegmentedAsync(rangeQuery, null))
+            dynamic Data = JObject.Parse(await new StreamReader(request.Body).ReadToEndAsync());
+            string Prefix = Data.Prefix;
+            string RequestId = Data.RequestID;
+            string Token = Data.token;
+            string HashedToken = Utilities.GetHashedToken(Token);
+            List<string> IssueIds = new List<string>();
+            List<string> Versions = new List<string>();
+            foreach(Issue issue in Data.Issues.ToObject<Issue[]>())
             {
-                if(item.HashedToken == hashedToken)
-                {
-                    records++;
-                }
-                else
-                {
-                    return new NotFoundResult();
-                }
+                IssueIds.Add(issue.name);
+                Versions.Add(issue.version);
             }
+            
+            RepoMapping[] Repos = Data.RepoMapping.ToObject<RepoMapping[]>();
+            TableQuery<PRDetail> GetPr = new TableQuery<PRDetail>().Where(
+                TableQuery.CombineFilters(
+                    TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Prefix),
+                TableOperators.And,
+                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, RequestId))
+            );
 
-            if(records != 1)
+            if((await DetailTable.ExecuteQuerySegmentedAsync(GetPr, null)).Results.Count != 1)
             {
                 return new NotFoundResult();
             }
 
-            foreach (string issueID in issueIDs)
+            foreach (string issueID in IssueIds)
             {
-                PRIssueMapping issueMapping = new PRIssueMapping()
+                PRIssueMapping IssueMapping = new PRIssueMapping()
                 {
-                    PartitionKey = $"{prefix}|{requestID}",
+                    PartitionKey = $"{Prefix}|{RequestId}",
                     RowKey = issueID
                 };
-                TableOperation operation = TableOperation.InsertOrReplace(issueMapping);
-                await issueTable.ExecuteAsync(operation);
+                TableOperation AddOrReplaceIssueMapping = TableOperation.InsertOrReplace(IssueMapping);
+                await IssueTable.ExecuteAsync(AddOrReplaceIssueMapping);
             }
 
-            foreach(RepoMapping repo in repos)
+            foreach(RepoMapping repo in Repos)
             {
                 foreach(string repoID in repo.Repos)
                 {
                     PRRepoMapping repoMapping = new PRRepoMapping()
                     {
-                        PartitionKey = $"{prefix}|{repo.Issue}",
+                        PartitionKey = $"{Prefix}|{repo.Issue}",
                         RowKey = repoID,
                         MergeStatus = "TODO"
                     };
-                    TableOperation operation2 = TableOperation.InsertOrReplace(repoMapping);
-                    await repoTable.ExecuteAsync(operation2);
+                    TableOperation AddOrReplaceRepoMapping = TableOperation.InsertOrReplace(repoMapping);
+                    await RepoTable.ExecuteAsync(AddOrReplaceRepoMapping);
                 }
             }
+            await DetailTable.ExecuteAsync(TableOperation.InsertOrMerge(new PRDetail() { PartitionKey = Prefix, RowKey = RequestId, JiraReleasedId = Versions[0] }));
             return new OkResult();
         }
     }

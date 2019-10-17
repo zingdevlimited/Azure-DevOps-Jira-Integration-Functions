@@ -13,74 +13,71 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using JiraDevOpsIntegrationFunctions.Helpers;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace JiraDevOpsIntegrationFunctions
 {
     public static class GetPRsAndRepos
     {
-        [FunctionName("GetPRsAndRepos")]
+        [FunctionName(nameof(GetPRsAndRepos))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
-            [Table(Constants.IssueMappingTable)] CloudTable issueMappingTable,
+            [Table(Constants.IssueMappingTable)] CloudTable IssueMappingTable,
             [Table(Constants.RepoMappingTable)] CloudTable RepoMappingTable,
             [Table(Constants.PrefixTable)] CloudTable GroupPrefixTable,
             ILogger log)
         {
-            var PRs = new List<string>();
-            var Repos = new List<RepoInfo>();
-            var PullInfo = new List<PR>();
-            dynamic data = JObject.Parse(await new StreamReader(req.Body).ReadToEndAsync());
-            string RowKey = data.key;
-            string prefix = "";
-            string urlName = "";
-            HttpClient client = new HttpClient();
-            string url = "";
-            var byteArray = Encoding.ASCII.GetBytes($":{Environment.GetEnvironmentVariable(Constants.AzureDevOpsConnectionName, EnvironmentVariableTarget.Process)}");
-
-            TableQuery<PRIssueMapping> rangeQuery = new TableQuery<PRIssueMapping>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, RowKey));
-            foreach (PRIssueMapping issue in await issueMappingTable.ExecuteQuerySegmentedAsync(rangeQuery, null))
+            List<RepoInfo> Repos = new List<RepoInfo>();
+            List<PR> PRs = new List<PR>();
+            dynamic Data = JObject.Parse(await new StreamReader(req.Body).ReadToEndAsync());
+            try
             {
-                string[] issueSplit = issue.PartitionKey.Split("|");
-                prefix = issueSplit[0];
-                PRs.Add(issueSplit[1]);
+                string Jwt = Data.jwt;
+                log.LogError(Jwt);
+                JwtSecurityToken x = new JwtSecurityToken(Jwt);
+                log.LogError("Encoded PayLoad: " + x.EncodedPayload);
+                if (Environment.GetEnvironmentVariable(Constants.JwtClientName, EnvironmentVariableTarget.Process) != new JwtSecurityToken(Jwt).Payload["iss"].ToString())
+                {
+                    return new BadRequestResult();
+                }
             }
-            string[] PRArray = PRs.ToArray();
-
-            TableQuery<GroupPrefix> rangeQuery3 = new TableQuery<GroupPrefix>().Where(TableQuery.GenerateFilterCondition("Prefix", QueryComparisons.Equal, prefix));
-            foreach (GroupPrefix repo in await GroupPrefixTable.ExecuteQuerySegmentedAsync(rangeQuery3, null))
+            catch(Exception e)
             {
-                string[] urlSplit = repo.PartitionKey.Split(" ");
-                urlName = urlSplit[1];
+                log.LogError("Error occured: Fetching data from table storage");
+                return new BadRequestResult();
             }
 
-            string PartitionKey = $"{prefix}|{RowKey}";
-            TableQuery<PRRepoMapping> rangeQuery2 = new TableQuery<PRRepoMapping>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, PartitionKey));
-            foreach (PRRepoMapping repo in await RepoMappingTable.ExecuteQuerySegmentedAsync(rangeQuery2, null))
+            string ProjectName = "";
+
+            TableQuery<GroupPrefix> GetProjectName = new TableQuery<GroupPrefix>().Where(TableQuery.GenerateFilterCondition("Prefix", QueryComparisons.Equal, Data.key.ToString().Split("-")[0]));
+            ProjectName = (await GroupPrefixTable.ExecuteQuerySegmentedAsync(GetProjectName, null)).Results[0].PartitionKey.Split(" ")[1];
+
+            TableQuery<PRIssueMapping> GetPRs = new TableQuery<PRIssueMapping>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, Data.key.ToString()));
+            foreach (PRIssueMapping issue in await IssueMappingTable.ExecuteQuerySegmentedAsync(GetPRs, null))
             {
-                url = $"https://dev.azure.com/{urlName}/_apis/git/repositories/{repo.RowKey}?api-version=4.1";
-                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
-                HttpResponseMessage response = await client.SendAsync(request);
-                dynamic repoJSON = JObject.Parse(await response.Content.ReadAsStringAsync());
-                string name = repoJSON.name;
+                dynamic name = await GetAzureDevOpsInfo($"https://dev.azure.com/{ProjectName}/_apis/git/pullrequests/{issue.PartitionKey.Split("|")[1]}?api-version=5.1", "PR");
+                PRs.Add(new PR() { Id = issue.PartitionKey.Split("|")[1] , Name = ProjectName, RepoTitle = name });
+            }
+
+            TableQuery<PRRepoMapping> GetRepos = new TableQuery<PRRepoMapping>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, $"{Data.key.ToString().Split("-")[0]}|{Data.key.ToString()}"));
+            foreach (PRRepoMapping repo in await RepoMappingTable.ExecuteQuerySegmentedAsync(GetRepos, null))
+            {
+                dynamic name = await GetAzureDevOpsInfo($"https://dev.azure.com/{ProjectName}/_apis/git/repositories/{repo.RowKey}?api-version=4.1", "Repo");
                 Repos.Add(new RepoInfo() {Status = repo.MergeStatus, RepoName = name});
             }
-            RepoInfo[] RepoArray = Repos.ToArray();
-
-
-            foreach (string PR in PRArray)
-            {
-                url = $"https://dev.azure.com/{urlName}/_apis/git/pullrequests/{PR}?api-version=5.1";
-                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);                
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
-                HttpResponseMessage response = await client.SendAsync(request);
-                dynamic titleJSON = JObject.Parse(await response.Content.ReadAsStringAsync());
-                string title = titleJSON.repository.name;
-                PullInfo.Add(new PR() { Id = PR, Name = urlName, RepoTitle = title });
-            }
-            PR[] pullInfo = PullInfo.ToArray();
             
-            return new OkObjectResult(new PRAndRepoResponse() { PullRequests = pullInfo, Repos = RepoArray });
+            return new OkObjectResult(new PRAndRepoResponse() { PullRequests = PRs.ToArray(), Repos = Repos.ToArray() });
+        }
+        public static async Task<dynamic> GetAzureDevOpsInfo(string url, string type)
+        {
+            HttpClient client = new HttpClient();
+            var byteArray = Encoding.ASCII.GetBytes($":{Environment.GetEnvironmentVariable(Constants.AzureDevOpsConnectionName, EnvironmentVariableTarget.Process)}");
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+            HttpResponseMessage response = await client.SendAsync(request);
+            dynamic JSON = JObject.Parse(await response.Content.ReadAsStringAsync());
+            string name = type == "PR" ? JSON.repository.name : JSON.name;
+            return name;
         }
     }
 }

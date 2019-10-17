@@ -3,7 +3,6 @@ using JiraDevOpsIntegrationFunctions.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Table;
 using System.Threading.Tasks;
 
@@ -14,21 +13,20 @@ namespace JiraDevOpsIntegrationFunctions.InternalFunctions
         [FunctionName(nameof(AddOrReplacePRDetailEntry))]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post")] AddOrReplacePRDetailRequest req,
-            [Table(Constants.PullRequestTable)] CloudTable table,
-            ILogger log)
+            [Table(Constants.PullRequestTable)] CloudTable PullRequestsTable)
         {
             if (req == null)
                 return new BadRequestResult();
 
-            var token = Utilities.GetToken(64);
-            var op = TableOperation.InsertOrReplace(new PRDetail()
+            var Token = Utilities.GetToken(64);
+            var AddOrReplaceToken = TableOperation.InsertOrReplace(new PRDetail()
             {
                 PartitionKey = req.GroupId,
                 RowKey = req.PullRequestId,
-                HashedToken = Utilities.GetHashedToken(token)
+                HashedToken = Utilities.GetHashedToken(Token)
             });
-            await table.ExecuteAsync(op);
-            return new OkObjectResult(new AddOrReplacePRDetailResponse() { Token = token });
+            await PullRequestsTable.ExecuteAsync(AddOrReplaceToken);
+            return new OkObjectResult(new AddOrReplacePRDetailResponse() { Token = Token });
         }
     }
 }

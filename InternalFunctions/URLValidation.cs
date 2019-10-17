@@ -16,30 +16,27 @@ namespace JiraDevOpsIntegrationFunctions.InternalFunctions
     {
         public static object GetHashedToken { get; private set; }
 
-        [FunctionName("URLValidation")]
+        [FunctionName(nameof(URLValidation))]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "post", "get", Route = null)] HttpRequest req,
-            [Table(Constants.PullRequestTable)] CloudTable cloudTable,
-            ILogger log)
+            [HttpTrigger(AuthorizationLevel.Function, "post", "get", Route = null)] HttpRequest Req,
+            [Table(Constants.PullRequestTable)] CloudTable PullRequestsTable)
         {
-            dynamic data = JObject.Parse(await new StreamReader(req.Body).ReadToEndAsync());
-            string prefix = data.prefix;
-            string prid = data.prid;
-            string token = data.token;
-            string hashToken = Utilities.GetHashedToken(token);
-            string realHashToken = "";
-            TableQuery<PRDetail> rangeQuery = new TableQuery<PRDetail>().Where(
+            dynamic Data = JObject.Parse(await new StreamReader(Req.Body).ReadToEndAsync());
+            string Prefix = Data.prefix;
+            string PrId = Data.prid;
+            string Token = Data.token;
+            string HashToken = Utilities.GetHashedToken(Token);
+            string RealHashToken = "";
+            TableQuery<PRDetail> GetToken = new TableQuery<PRDetail>().Where(
                 TableQuery.CombineFilters(
-                    TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, prefix),
+                    TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Prefix),
                 TableOperators.And,
-                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, prid))
+                    TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, PrId))
                 );
-            foreach (PRDetail item in await cloudTable.ExecuteQuerySegmentedAsync(rangeQuery, null))
-            {
-                realHashToken = item.HashedToken;
-            }
 
-            if (realHashToken == hashToken)
+            RealHashToken = (await PullRequestsTable.ExecuteQuerySegmentedAsync(GetToken, null)).Results[0].ToString();
+
+            if (RealHashToken == HashToken)
             {
                 return new OkResult();
             }

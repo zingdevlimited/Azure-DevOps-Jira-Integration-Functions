@@ -10,11 +10,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ProjectFunctions.Models;
 
-namespace ProjectFunctions
+namespace JiraDevOpsIntegrationFunctions.InternalFunctions
 {
     public static class CheckStaleBranch
     {
-        [FunctionName("CheckStaleBranch")]
+        [FunctionName(nameof(CheckStaleBranch))]
         public async static Task Run([ServiceBusTrigger(Constants.ServiceBus, Constants.StaleBranchTriggerName, Connection = Constants.ServiceBusConnectionName)]PRInfo info, ILogger log)
         {
             string url = $"{info.BaseURL}_apis/git/repositories/{info.RepoID}/stats/branches?name={info.Source}&baseVersionDescriptor.version={info.Target}&api-version=5.1";
@@ -25,12 +25,12 @@ namespace ProjectFunctions
             HttpResponseMessage response = await client.SendAsync(req);
             if (response.IsSuccessStatusCode)
             {
-                JObject data = JObject.Parse(await response.Content.ReadAsStringAsync());
+                dynamic data = JObject.Parse(await response.Content.ReadAsStringAsync());
                 string statusURL = $"{info.BaseURL}/_apis/git/repositories/{info.RepoID}/pullRequests/{info.PullRequestID}/statuses/statuses?api-version=5.1-preview.1";
                 HttpRequestMessage statusChange = new HttpRequestMessage(HttpMethod.Post, statusURL);
                 statusChange.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(Constants.AzureDevOpsAuthenticationHeaderInstruction, Convert.ToBase64String(byteArray));
                 StaleBranchResponse obj;
-                if (Int32.Parse(data["behindCount"].ToString()) > 0)
+                if (Int32.Parse(data.behindCount.ToString()) > 0)
                 {
                     obj = CreateStaleBranchResponse("failed", "Behind Branch");
                 }

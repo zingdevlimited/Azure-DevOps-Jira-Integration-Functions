@@ -10,22 +10,19 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JiraDevOpsIntegrationFunctions
+namespace JiraDevOpsIntegrationFunctions.InternalFunctions
 {
     public static class CheckJiraIssues
     {
-        [FunctionName("CheckJiraIssues")]
+        [FunctionName(nameof(CheckJiraIssues))]
         public async static Task Run([ServiceBusTrigger(Constants.ServiceBus, Constants.JiraIssuesTriggerName, Connection = Constants.ServiceBusConnectionName)]PRInfo info, 
-            [Table("PRIssueMapping")] CloudTable issueMappingTable, 
+            [Table(Constants.IssueMappingTable)] CloudTable IssueMappingTable, 
             ILogger log)
         {
             string PartitionKey = $"{info.Prefix}|{info.PullRequestID}";
-            int records = 0;
-            TableQuery<PRIssueMapping> rangeQuery = new TableQuery<PRIssueMapping>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, PartitionKey));
-            foreach (PRIssueMapping issue in await issueMappingTable.ExecuteQuerySegmentedAsync(rangeQuery, null))
-            {
-                records++;
-            }
+            TableQuery<PRIssueMapping> GetIssues = new TableQuery<PRIssueMapping>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, PartitionKey));
+            int records = (await IssueMappingTable.ExecuteQuerySegmentedAsync(GetIssues, null)).Results.Count;
+
             HttpClient client = new HttpClient();
             var byteArray = Encoding.ASCII.GetBytes($":{Environment.GetEnvironmentVariable(Constants.AzureDevOpsConnectionName, EnvironmentVariableTarget.Process)}");
             string statusURL = $"{info.BaseURL}/_apis/git/repositories/{info.RepoID}/pullRequests/{info.PullRequestID}/statuses/statuses?api-version=5.1-preview.1";
